@@ -25,7 +25,7 @@ def gc(arg, fail=False):
         return fail
 
 
-def whenIsNextLrnDue(sqlstring):
+def whenIsNextLrnDue(sqlstring, append_relative):
     o = aqt.mw.col.db.all(sqlstring)
     if o:
         o = dict(o)
@@ -60,8 +60,11 @@ def whenIsNextLrnDue(sqlstring):
             else:
                 f = "%H:%M"
             color = "white" if theme_manager.night_mode else "black"
+            linktext = cdo.strftime(f)
+            if append_relative:
+                linktext += f" ({timeInAgo(cdo)})"
             tstr = f'''<a href=# style="text-decoration: none; color:{color};"
-            onclick="return pycmd('BrowserSearch#{str(cid)}')">{cdo.strftime(f)} ({timeInAgo(cdo)})</a>'''
+            onclick="return pycmd('BrowserSearch#{str(cid)}')">{linktext}</a>'''
             msg = gc("sentence_beginning", "The next learning card due today is due at ") + tstr
             return "<div>" + msg + "</div>"
     else:
@@ -96,7 +99,7 @@ def timeInAgo(t):
 
 def deckbrowserMessage(self, _old):
     sql_string_all = """select id, due from cards where queue = 1 order by due"""
-    out = whenIsNextLrnDue(sql_string_all)
+    out = whenIsNextLrnDue(sql_string_all, False)
     if out:
         return _old(self) + out
     else:
@@ -108,8 +111,7 @@ DeckBrowser._renderStats = wrap(DeckBrowser._renderStats, deckbrowserMessage, "a
 def addRemainingTimeToDesc(overview, content):
     did = str(aqt.mw.col.decks.current()["id"])
     sql_string_deck = """select id, due from cards where queue = 1 and did = """ + did + """ order by due"""
-    content.desc += whenIsNextLrnDue(sql_string_deck)
-
+    content.desc += whenIsNextLrnDue(sql_string_deck, True)
 gui_hooks.overview_will_render_content.append(addRemainingTimeToDesc)
 
 
