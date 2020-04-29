@@ -26,10 +26,10 @@ def gc(arg, fail=False):
 
 
 def whenIsNextLrnDue(sqlstring, append_relative):
-    o = aqt.mw.col.db.all(sqlstring)
-    if not o:
+    all_learning = aqt.mw.col.db.all(sqlstring)
+    if not all_learning:
         return
-    o = dict(o)
+    all_learning = dict(all_learning)  # dict consists of  card_id: due_in_epoch_time
     now = datetime.datetime.now()
     # dayOffset - next day starts at
     # in 2.1.14 values can be between 0 and 23, no negative values
@@ -48,26 +48,29 @@ def whenIsNextLrnDue(sqlstring, append_relative):
     todaystart = datetime.datetime(year=now.year, month=now.month,
                                     day=now.day, hour=dayOffset, second=0)
     todaystartepoch = int(todaystart.timestamp())
-    for c in sorted(list(o.values())):
-        if c < todaystartepoch:
+    relevant_cid = None
+    for this_due_val in sorted(list(all_learning.values())):
+        if this_due_val < todaystartepoch:
             continue
-        for k, v in o.items():
-            if v == c:
-                cid = k
+        for cid, due_val in all_learning.items():
+            if due_val == this_due_val:
+                relevant_cid = cid
                 break
-        cdo = datetime.datetime.fromtimestamp(c)
-        if gc("time_with_seconds", True):
-            f = "%H:%M:%S"
-        else:
-            f = "%H:%M"
-        color = "white" if theme_manager.night_mode else "black"
-        linktext = cdo.strftime(f)
-        if append_relative:
-            linktext += f" ({timeInAgo(cdo)})"
-        tstr = f'''<a href=# style="text-decoration: none; color:{color};"
-        onclick="return pycmd('BrowserSearch#{str(cid)}')">{linktext}</a>'''
-        msg = gc("sentence_beginning", "The next learning card due today is due at ") + tstr
-        return "<div>" + msg + "</div>"
+    if not relevant_cid:
+        return
+    cdo = datetime.datetime.fromtimestamp(this_due_val)
+    if gc("time_with_seconds", True):
+        f = "%H:%M:%S"
+    else:
+        f = "%H:%M"
+    color = "white" if theme_manager.night_mode else "black"
+    linktext = cdo.strftime(f)
+    if append_relative:
+        linktext += f" ({timeInAgo(cdo)})"
+    tstr = f'''<a href=# style="text-decoration: none; color:{color};"
+    onclick="return pycmd('BrowserSearch#{str(relevant_cid)}')">{linktext}</a>'''
+    msg = gc("sentence_beginning", "The next learning card due today is due at ") + tstr
+    return "<div>" + msg + "</div>"
 
 
 def timeInAgo(t):
