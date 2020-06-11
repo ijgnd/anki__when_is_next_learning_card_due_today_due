@@ -34,19 +34,19 @@ def whenIsNextLrnDue(sqlstring, append_relative):
     # dayOffset - next day starts at
     # in 2.1.14 values can be between 0 and 23, no negative values
     if aqt.mw.col.schedVer() == 2:
-        dayOffset = aqt.mw.col.conf['rollover']   # by default 4
+        dayOffset = aqt.mw.col.conf["rollover"]  # by default 4
     else:
         # https://github.com/ankidroid/Anki-Android/wiki/Database-Structure
         #   crt = timestamp of the creation date. It's correct up to the day. For V1 scheduler,
         #   the hour corresponds to starting a new day. By default, new day is 4.
         dayOffset = datetime.datetime.fromtimestamp(aqt.mw.col.crt).hour
 
-    now = datetime.datetime.today()     # returns the current local date.
-                                        # This is equivalent to date.fromtimestamp(time.time())
+    now = datetime.datetime.today()  # returns the current local date, same as date.fromtimestamp(time.time())
     if now.hour < dayOffset:
         now = now - datetime.timedelta(days=1)
-    todaystart = datetime.datetime(year=now.year, month=now.month,
-                                    day=now.day, hour=dayOffset, second=0)
+    todaystart = datetime.datetime(
+        year=now.year, month=now.month, day=now.day, hour=dayOffset, second=0
+    )
     todaystartepoch = int(todaystart.timestamp())
     relevant_cid = None
     for this_due_val in sorted(list(all_learning.values())):
@@ -59,16 +59,17 @@ def whenIsNextLrnDue(sqlstring, append_relative):
     if not relevant_cid:
         return
     cdo = datetime.datetime.fromtimestamp(this_due_val)
-    if gc("time_with_seconds", True):
-        f = "%H:%M:%S"
+    seconds = ":%S" if gc("time_with_seconds", True) else ""
+    if gc("time_24hour_clock", True):
+        f = f"%H:%M{seconds}"
     else:
-        f = "%H:%M"
+        f = f"%I:%M{seconds} %p"
     color = "white" if theme_manager.night_mode else "black"
     linktext = cdo.strftime(f)
     if append_relative:
         linktext += f" ({timeInAgo(cdo)})"
-    tstr = f'''<a href=# style="text-decoration: none; color:{color};"
-    onclick="return pycmd('BrowserSearch#{str(relevant_cid)}')">{linktext}</a>'''
+    tstr = f"""<a href=# style="text-decoration: none; color:{color};"
+    onclick="return pycmd('BrowserSearch#{str(relevant_cid)}')">{linktext}</a>"""
     msg = gc("sentence_beginning", "The next learning card due today is due at ") + tstr
     return "<div>" + msg + "</div>"
 
@@ -83,8 +84,8 @@ def timeInAgo(t):
         td = now - t
     if int(td.total_seconds()) == 0:
         return "now"
-    hours = int(td.total_seconds()/3600)
-    minutes = int(td.total_seconds()/60 % 60)
+    hours = int(td.total_seconds() / 3600)
+    minutes = int(td.total_seconds() / 60 % 60)
     seconds = int(td.total_seconds() % 60)
     msg = ""
     if hours:
@@ -112,8 +113,8 @@ DeckBrowser._renderStats = wrap(DeckBrowser._renderStats, deckbrowserMessage, "a
 
 def addRemainingTimeToDesc(overview, content):
     did = str(aqt.mw.col.decks.current()["id"])
-    sql_string_deck = """select id, due from cards where queue = 1 and did = """ + did + """ order by due"""
-    add_this = whenIsNextLrnDue(sql_string_deck, True)
+    sql = f"select id, due from cards where queue = 1 and did = {did} order by due"
+    add_this = whenIsNextLrnDue(sql, True)
     if add_this:
         content.desc += add_this
 gui_hooks.overview_will_render_content.append(addRemainingTimeToDesc)
@@ -123,8 +124,8 @@ def openBrowser(searchterm):
     browser = aqt.dialogs.open("Browser", aqt.mw)
     browser.form.searchEdit.lineEdit().setText(searchterm)
     browser.onSearchActivated()
-    if u'noteCrt' in browser.model.activeCols:
-        col_index = browser.model.activeCols.index(u'noteCrt')
+    if "noteCrt" in browser.model.activeCols:
+        col_index = browser.model.activeCols.index("noteCrt")
         browser.onSortChanged(col_index, True)
     browser.form.tableView.selectRow(0)
 
